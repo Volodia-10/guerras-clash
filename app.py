@@ -1,85 +1,78 @@
 from flask import Flask, render_template, request, send_file
 import pandas as pd
-import os
-from datetime import datetime
 from playwright.sync_api import sync_playwright
+from datetime import datetime
+import os
 
 app = Flask(__name__)
 
-def scrap_guerra(url):
+def extraer_datos(url):
     with sync_playwright() as p:
-        browser = p.chromium.launch(headless=True)
+        browser = p.chromium.launch()
         page = browser.new_page()
-        page.goto(url, timeout=60000)
+        page.goto(url)
 
-        page.wait_for_selector('.clan1')
-        members = page.query_selector_all('.clan1')
+        # Esperar a que cargue el contenido
+        page.wait_for_selector('.war-members')
 
-        data = []
+        # Fecha
+        fecha = page.locator('.date-end .param-value').inner_text().split(',')[0].replace('/', '-')
+
+        # Nombre del clan enemigo
+        clan_enemigo = page.locator('.clan2 .clan-name').inner_text().strip()
+
+        # Inicializar listas
+        nombres = []
+        ataque1 = []
+        ataque2 = []
         plenos = []
 
-        # Extraer fecha real de la guerra
-        try:
-            fecha_str = page.query_selector('.date-end .param-value').inner_text().strip()
-            guerra_date = datetime.strptime(fecha_str, '%m/%d/%y, %I:%M %p').strftime('%Y-%m-%d')
-        except:
-            guerra_date = 'fecha-desconocida'
+        miembros = page.locator('.war-members .member')
 
-        # Extraer nombre del clan enemigo (clan2)
-        try:
-            nombre_clan_enemigo = page.query_selector('.clan2 .clan-name').inner_text().strip().replace(" ", "_")
-        except:
-            nombre_clan_enemigo = 'clan_enemigo_desconocido'
+        for i in range(miembros.count()):
+            jugador = miembros.nth(i)
+            nombre = jugador.locator('.player-name').inner_text()
+            estrellas = jugador.locator('.attack-star').all_inner_texts()
 
-        for member in members:
-            try:
-                name = member.query_selector('.player-name').inner_text().strip()
-                attack_stars = member.query_selector_all('.attack-stars')
-                stars = []
+            # Añadir a la tabla de ataques
+            nombres.append(nombre)
+            ataque1.append(int(estrellas[0]) if len(estrellas) > 0 else '')
+            ataque2.append(int(estrellas[1]) if len(estrellas) > 1 else '')
 
-                for atk in attack_stars:
-                    classes = atk.get_attribute('class')
-                    for n in range(4):
-                        if f'stars-{n}' in classes:
-                            stars.append(n)
-                            break
+            # Verificar si hizo 2 plenos
+            if estrellas.count('3') == 2:
+                plenos.append(nombre)
 
-                if stars:
-                    data.append({
-                        'Name': name,
-                        'Attack 1 Stars': stars[0] if len(stars) > 0 else '-',
-                        'Attack 2 Stars': stars[1] if len(stars) > 1 else '-'
-                    })
+        # Crear dataframes
+        df_ataques = pd.DataFrame({
+            'Name': nombres,
+            'Attack 1 Stars': ataque1,
+            'Attack 2 Stars': ataque2
+        })
 
-                    if len(stars) > 1 and stars[0] == 3 and stars[1] == 3:
-                        plenos.extend([name] * 3)
-                    elif 3 in stars:
-                        plenos.append(name)
-
-            except:
-                continue
-
-        browser.close()
-
-        # Guardar Excel con nombre personalizado
-        df = pd.DataFrame(data)
         df_plenos = pd.DataFrame({'Plenos': plenos})
-        filename = f'Guerra_{nombre_clan_enemigo}_{guerra_date}.xlsx'
 
-        with pd.ExcelWriter(filename) as writer:
-            df.to_excel(writer, sheet_name='Ataques', index=False)
+        # Nombre del archivo con el clan enemigo y fecha
+        nombre_archivo = f'Guerra_{clan_enemigo}_{fecha}.xlsx'
+
+        with pd.ExcelWriter(nombre_archivo) as writer:
+            df_ataques.to_excel(writer, sheet_name='Ataques', index=False)
             df_plenos.to_excel(writer, sheet_name='Plenos', index=False)
 
-        return filename
+        browser.close()
+        return nombre_archivo
 
 @app.route('/', methods=['GET', 'POST'])
 def index():
     if request.method == 'POST':
         url = request.form['url']
-        if url:
-            filename = scrap_guerra(url)
-            return send_file(filename, as_attachment=True)
+        try:
+            archivo_generado = extraer_datos(url)
+            return send_file(archivo_generado, as_attachment=True)
+        except Exception as e:
+            return f"<h1>❌ Error al procesar la URL:</h1><pre>{e}</pre>"
+
     return render_template('index.html')
 
 if __name__ == '__main__':
-    app.run(debug=True)
+    app.run(host="0.0.0.0", port=10000, debug=True)
