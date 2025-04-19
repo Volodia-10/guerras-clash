@@ -6,7 +6,7 @@ from playwright.sync_api import sync_playwright
 import subprocess
 
 # Asegura que los navegadores estén instalados al iniciar
-subprocess.run(["playwright", "install", "--with-deps"], check=True)
+subprocess.run(["playwright", "install"], check=True)
 
 app = Flask(__name__)
 
