@@ -1,37 +1,40 @@
 from flask import Flask, render_template, request, send_file
-import os
-import pandas as pd
 from playwright.sync_api import sync_playwright
+import pandas as pd
+from datetime import datetime
+import os
 
 app = Flask(__name__)
 
 def extraer_datos(url):
-    # Crear carpeta 'static' si no existe
+    # Asegura que la carpeta 'static' exista
     os.makedirs("static", exist_ok=True)
 
     with sync_playwright() as p:
-        navegador = p.chromium.launch(headless=True)
+        # Soluciona crashes con --no-sandbox
+        navegador = p.chromium.launch(headless=True, args=["--no-sandbox"])
         pagina = navegador.new_page()
 
-        print("Visitando URL:", url)
+        print("🌐 Visitando URL:", url)
         pagina.goto(url, wait_until="networkidle")
 
-        # Captura para debug
+        # Captura de pantalla para depurar visualmente en Render
         pagina.screenshot(path="static/debug.png")
-        print("Captura tomada en static/debug.png")
+        print("📸 Captura tomada en static/debug.png")
 
-        # Espera a que el clan cargue
+        # Esperar a que cargue el clan enemigo
         pagina.wait_for_selector(".clan2 .clan-name")
         nombre_clan = pagina.locator(".clan2 .clan-name").text_content().strip().replace(" ", "_")
-        print("Clan enemigo:", nombre_clan)
+        print("👑 Clan enemigo detectado:", nombre_clan)
 
-        # Aquí iría tu lógica para recolectar datos de plenos y ataques
-        # Simulamos algo sencillo para comprobar que funciona
-
+        # Simulación de extracción de datos (aquí debes colocar tu lógica real)
         plenos = [{"Jugador": "Ejemplo1"}, {"Jugador": "Ejemplo2"}]
         ataques = [{"Jugador": "Ejemplo1"}, {"Jugador": "Ejemplo2"}]
 
-        ruta_archivo = f"static/{nombre_clan}.xlsx"
+        # Guardar archivo Excel en carpeta 'static'
+        fecha_actual = datetime.now().strftime("%Y-%m-%d")
+        nombre_archivo = f"Guerra_{nombre_clan}_{fecha_actual}.xlsx"
+        ruta_archivo = os.path.join("static", nombre_archivo)
 
         with pd.ExcelWriter(ruta_archivo) as writer:
             pd.DataFrame(plenos).to_excel(writer, sheet_name="Plenos", index=False)
