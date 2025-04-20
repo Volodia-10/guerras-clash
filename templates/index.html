@@ -1,15 +1,13 @@
 <!DOCTYPE html>
-<html lang="es">
+<html>
 <head>
-    <meta charset="UTF-8">
-    <title>Descargar guerra</title>
+  <title>Generador de Excel - Clash of Clans</title>
 </head>
 <body>
-    <h1>Descargar datos de guerra</h1>
-    <form action="/generar" method="post">
-        <label for="url">Pega aquí la URL de la guerra:</label><br><br>
-        <input type="text" id="url" name="url" size="80" required><br><br>
-        <button type="submit">Generar archivo</button>
-    </form>
+  <h1>Ingresa el link de la guerra:</h1>
+  <form action="/generar" method="post">
+    <input type="text" name="url" placeholder="Pega aquí el link" required>
+    <button type="submit">Generar Excel</button>
+  </form>
 </body>
 </html>
