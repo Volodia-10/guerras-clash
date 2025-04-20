@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 
-# Instala dependencias de Python
+# Instala las dependencias de Python
 pip install -r requirements.txt
 
-# Instala navegadores para Playwright
-playwright install --with-deps
+# Instala los navegadores de Playwright correctamente
+python -m playwright install chromium --with-deps
