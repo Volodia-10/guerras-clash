@@ -7,35 +7,37 @@ import os
 app = Flask(__name__)
 
 def extraer_datos(url):
-    # Asegura que la carpeta 'static' exista
     os.makedirs("static", exist_ok=True)
 
     with sync_playwright() as p:
-        # Soluciona crashes con --no-sandbox
         navegador = p.chromium.launch(headless=True, args=["--no-sandbox"])
         pagina = navegador.new_page()
 
         print("🌐 Visitando URL:", url)
         pagina.goto(url, wait_until="networkidle")
 
-        # Captura de pantalla para depurar visualmente en Render
-        pagina.screenshot(path="static/debug.png")
-        print("📸 Captura tomada en static/debug.png")
+        # Captura de pantalla para depuración sin bloquear la app
+        try:
+            pagina.screenshot(path="static/debug.png", timeout=5000)
+            print("✅ Captura tomada correctamente")
+        except Exception as e:
+            print("⚠️ No se pudo tomar la captura:", e)
 
-        # Esperar a que cargue el clan enemigo
+        # Esperar a que el clan enemigo aparezca
         pagina.wait_for_selector(".clan2 .clan-name")
         nombre_clan = pagina.locator(".clan2 .clan-name").text_content().strip().replace(" ", "_")
         print("👑 Clan enemigo detectado:", nombre_clan)
 
-        # Simulación de extracción de datos (aquí debes colocar tu lógica real)
+        # Simulación de extracción real (debes reemplazar por tu lógica real)
         plenos = [{"Jugador": "Ejemplo1"}, {"Jugador": "Ejemplo2"}]
         ataques = [{"Jugador": "Ejemplo1"}, {"Jugador": "Ejemplo2"}]
 
-        # Guardar archivo Excel en carpeta 'static'
+        # Nombre del archivo
         fecha_actual = datetime.now().strftime("%Y-%m-%d")
         nombre_archivo = f"Guerra_{nombre_clan}_{fecha_actual}.xlsx"
         ruta_archivo = os.path.join("static", nombre_archivo)
 
+        # Crear el archivo Excel
         with pd.ExcelWriter(ruta_archivo) as writer:
             pd.DataFrame(plenos).to_excel(writer, sheet_name="Plenos", index=False)
             pd.DataFrame(ataques).to_excel(writer, sheet_name="Ataques", index=False)
