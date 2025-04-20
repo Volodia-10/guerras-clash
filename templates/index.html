@@ -1,14 +1,15 @@
 <!DOCTYPE html>
-<html>
+<html lang="es">
 <head>
-    <title>Descargar Guerra Clash</title>
+    <meta charset="UTF-8">
+    <title>Generar Excel de Guerra</title>
 </head>
 <body>
-    <h1>Descargar reporte de guerra</h1>
-    <form method="POST">
+    <h1>Extraer Guerra de Clash of Clans</h1>
+    <form action="/generar" method="POST">
         <label for="url">Pega la URL de la guerra:</label><br><br>
-        <input type="text" name="url" style="width: 400px;" required><br><br>
-        <button type="submit">Descargar Excel</button>
+        <input type="text" id="url" name="url" placeholder="https://link-a-la-guerra.com" required size="60"><br><br>
+        <button type="submit">Generar Excel</button>
     </form>
 </body>
 </html>
