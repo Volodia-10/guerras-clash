@@ -10,34 +10,53 @@ def extraer_datos(url):
     os.makedirs("static", exist_ok=True)
 
     with sync_playwright() as p:
-        navegador = p.chromium.launch(headless=True, args=["--no-sandbox"])
+        navegador = p.firefox.launch(headless=True, args=["--no-sandbox"])
         pagina = navegador.new_page()
 
-        print("🌐 Visitando URL:", url)
-        pagina.goto(url, wait_until="networkidle")
+        # Bloqueamos imágenes, fuentes y estilos para mejorar rendimiento
+        def filtrar_recursos(route, request):
+            if request.resource_type in ["image", "font", "stylesheet"]:
+                route.abort()
+            else:
+                route.continue_()
 
-        # Captura de pantalla para depuración sin bloquear la app
+        pagina.route("**/*", filtrar_recursos)
+
+        print("🌐 Visitando URL:", url)
+
+        try:
+            pagina.goto(url, wait_until="domcontentloaded")
+        except Exception as e:
+            print("❌ Error al cargar la página:", e)
+            navegador.close()
+            raise Exception("Error al acceder a la URL proporcionada.")
+
+        # Intentar captura para depuración
         try:
             pagina.screenshot(path="static/debug.png", timeout=5000)
-            print("✅ Captura tomada correctamente")
+            print("📸 Captura tomada correctamente")
         except Exception as e:
             print("⚠️ No se pudo tomar la captura:", e)
 
-        # Esperar a que el clan enemigo aparezca
-        pagina.wait_for_selector(".clan2 .clan-name")
-        nombre_clan = pagina.locator(".clan2 .clan-name").text_content().strip().replace(" ", "_")
+        # Intentar extraer el nombre del clan enemigo
+        try:
+            pagina.wait_for_selector(".clan2 .clan-name")
+            nombre_clan = pagina.locator(".clan2 .clan-name").text_content().strip().replace(" ", "_")
+        except Exception as e:
+            print("⚠️ No se pudo extraer el nombre del clan enemigo:", e)
+            nombre_clan = "Clan_Desconocido"
+
         print("👑 Clan enemigo detectado:", nombre_clan)
 
-        # Simulación de extracción real (debes reemplazar por tu lógica real)
+        # Simulación de datos (reemplaza con scraping real)
         plenos = [{"Jugador": "Ejemplo1"}, {"Jugador": "Ejemplo2"}]
         ataques = [{"Jugador": "Ejemplo1"}, {"Jugador": "Ejemplo2"}]
 
-        # Nombre del archivo
+        # Crear nombre del archivo con fecha
         fecha_actual = datetime.now().strftime("%Y-%m-%d")
         nombre_archivo = f"Guerra_{nombre_clan}_{fecha_actual}.xlsx"
         ruta_archivo = os.path.join("static", nombre_archivo)
 
-        # Crear el archivo Excel
         with pd.ExcelWriter(ruta_archivo) as writer:
             pd.DataFrame(plenos).to_excel(writer, sheet_name="Plenos", index=False)
             pd.DataFrame(ataques).to_excel(writer, sheet_name="Ataques", index=False)
